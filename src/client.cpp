@@ -10,7 +10,7 @@ bool Client::addEvent(void (Client::*func)(int), int mask)
 {
     if (shared_ptr<Rkernel> p = kptr.lock())
     {
-        return p->createEvent(_fd, mask, func, this);
+        return p->createEvent(_fd, mask, bind(func, this, placeholders::_1));
     }
     return false;
 }

@@ -49,7 +49,7 @@ ServerHandle::ServerHandle()
 
     NetworkHelper::setNoblock(this->fd, true);
     freeaddrinfo(servinfo);
-    this->kernel->createEvent(this->fd, R_READABLE, &ServerHandle::Accept, this);
+    this->kernel->createEvent(this->fd, R_READABLE, bind(&ServerHandle::Accept, this, placeholders::_1));
 }
 bool ServerHandle::Start()
 {
@@ -71,5 +71,5 @@ void ServerHandle::Accept(int fd)
     cout << c << endl;
     NetworkHelper::setNoblock(c, true);
     Clients->at(c) = shared_ptr<Client>(new Client(c));
-    kernel->createEvent(c, R_READABLE, &Client::firstRead, Clients->at(c).get());
+    kernel->createEvent(c, R_READABLE, bind(&Client::firstRead, Clients->at(c), placeholders::_1));
 }
