@@ -70,6 +70,6 @@ void ServerHandle::Accept(int fd)
     }
     cout << c << endl;
     NetworkHelper::setNoblock(c, true);
-    Clients->at(c) = shared_ptr<Client>(new Client(c));
+    Clients->at(c) = make_shared<Client>(c);
     kernel->createEvent(c, R_READABLE, bind(&Client::firstRead, Clients->at(c), placeholders::_1));
 }
