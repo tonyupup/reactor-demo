@@ -1,4 +1,6 @@
 #include "rkernel.h"
+#include "epollApi.h"
+#include "networking.h"
 Rkernel::Rkernel(int maxSize)
 {
     this->eventapi = make_shared<Epoll>(maxSize);

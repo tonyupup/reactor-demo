@@ -6,8 +6,7 @@
 #include <vector>
 #include <functional>
 
-#include "epollApi.h"
-#include "networking.h"
+
 // typedef void (BaseHandle::*FileProc)(int mask);
 
 using namespace std;

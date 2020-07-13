@@ -1,6 +1,8 @@
 #include "client.h"
 #include "server.h"
 #include <unistd.h>
+#include "networking.h"
+#include "rkernel.h"
 
 Client::operator int() const
 {

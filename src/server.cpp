@@ -2,7 +2,9 @@
 #include <sys/socket.h>
 #include <netdb.h>
 #include <string.h>
-
+#include "rkernel.h"
+#include "client.h"
+#include "networking.h"
 ServerHandle::ServerHandle()
 {
     this->Clients = make_shared<vector<shared_ptr<Client>>>(1024);
@@ -51,6 +53,11 @@ ServerHandle::ServerHandle()
     freeaddrinfo(servinfo);
     this->kernel->createEvent(this->fd, R_READABLE, bind(&ServerHandle::Accept, this, placeholders::_1));
 }
+void ServerHandle::Stop()
+{
+    close(fd);
+    kernel->stop();
+};
 bool ServerHandle::Start()
 {
 

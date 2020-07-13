@@ -4,11 +4,12 @@
 #include <errno.h>
 #include <iostream>
 #include <netdb.h>
-#include <malloc.h>
 #include <string.h>
 #include <sys/unistd.h>
 #include <functional>
 #include <arpa/inet.h>
+#include <vector>
+#include <memory>
 
 bool NetworkHelper::setNoblock(int fd, bool non_block)
 {

@@ -7,7 +7,7 @@
 #include <sys/unistd.h>
 #include <memory>
 #include <vector>
-#include "rkernel.h"
+
 using namespace std;
 
 struct FileEvent;

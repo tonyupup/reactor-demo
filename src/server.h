@@ -5,11 +5,11 @@
 #include <vector>
 #include <sys/unistd.h>
 
-#include "rkernel.h"
-#include "client.h"
+
 
 using namespace std;
-
+class Rkernel;
+class Client;
 class ServerHandle
 {
 public:
@@ -18,11 +18,8 @@ public:
     void FirstRead(int mask);
     bool Start();
     Client &findClient(int fd);
-    void Stop()
-    {
-        close(fd);
-        kernel->stop();
-    };
+    void Stop();
+    
     const int mfd() const { return fd; };
 
 private:

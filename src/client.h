@@ -2,11 +2,11 @@
 #define __CLIENT_H
 
 #include <iostream>
-#include "rkernel.h"
-#include <unistd.h>
+#include <memory>
 
 using namespace std;
 
+class Rkernel;
 class Client
 {
 public:

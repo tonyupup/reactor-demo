@@ -2,8 +2,6 @@
 #define __NETWORKING_H
 
 #include <unistd.h>
-#include <vector>
-#include <memory>
 
 using namespace std;
 class NetworkHelper
