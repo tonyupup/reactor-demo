@@ -12,7 +12,6 @@ class Client
 public:
     struct RemoteIP
     {
-        /* data */
         char ip[64];
         int port;
     } remoteIp;
@@ -25,13 +24,17 @@ public:
     };
     bool addEvent(void (Client::*p)(int), int mask);
     bool delEvent(int mask);
-    void firstRead(int fd);
     void cclose();
     void onMessage(int fd);
     operator int() const;
     friend ostream &operator<<(ostream &cout, const Client &c)
     {
-        cout << "Fd:" << c._fd << ",RemoteIP(" << c.remoteIp.ip << ":" << c.remoteIp.port << ")";
+        cout << "FD:";
+        cout.setf(ios::right);
+        cout.width(4);
+        cout<< c._fd;
+        cout.unsetf(ios::right);
+        cout <<",RemoteIP(" << c.remoteIp.ip << ":" << c.remoteIp.port << ")";
         return cout;
     }
 

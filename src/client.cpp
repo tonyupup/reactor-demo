@@ -25,19 +25,11 @@ bool Client::delEvent(int mask)
     }
     return false;
 }
-void Client::firstRead(int fd)
-{
-    delEvent(R_READABLE);
-    char buf[10] = {0};
-    read(fd, buf, 10);
-    cout << buf;
-    addEvent(&Client::onMessage, R_READABLE);
-}
 void Client::onMessage(int fd)
 {
     char x[10] = {0};
     int n = NetworkHelper::anetRead(fd, x, 10);
-    if (!n && (errno & EAGAIN))
+    if (!n && ((errno & EAGAIN) || !errno))
     {
         delEvent(R_READABLE);
         cclose();

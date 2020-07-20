@@ -77,6 +77,6 @@ void ServerHandle::Accept(int fd)
     }
     cout << c << endl;
     NetworkHelper::setNoblock(c, true);
-    Clients->at(c) = make_shared<Client>(c);
-    kernel->createEvent(c, R_READABLE, bind(&Client::firstRead, Clients->at(c), placeholders::_1));
+    Clients->at(c) = make_shared<Client>(c);//may be renew 
+    kernel->createEvent(c, R_READABLE, bind(&Client::onMessage, Clients->at(c), placeholders::_1));
 }
