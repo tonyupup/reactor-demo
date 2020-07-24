@@ -5,6 +5,7 @@
 #include "rkernel.h"
 #include "client.h"
 #include "networking.h"
+#include <regex>
 ServerHandle::ServerHandle()
 {
     this->Clients = make_shared<vector<shared_ptr<Client>>>(1024);
@@ -58,6 +59,18 @@ void ServerHandle::Stop()
     close(fd);
     kernel->stop();
 };
+shared_ptr<Client> ServerHandle::findClient(int fd)
+{
+    shared_ptr<Client> c = this->Clients->at(fd);
+    if (c)
+    {
+        return c;
+    }
+    else
+    {
+        return nullptr;
+    }
+}
 bool ServerHandle::Start()
 {
 
@@ -69,14 +82,14 @@ bool ServerHandle::Start()
 void ServerHandle::Accept(int fd)
 {
 
-    Client c(kernel);
-    if (-1 == (c = NetworkHelper::anetTcpAccept(fd, (char *)c.remoteIp.ip, 64, &c.remoteIp.port)))
+    auto c=make_shared<MClient>(kernel);
+    if (-1 == (*c = NetworkHelper::anetTcpAccept(fd, (char *)c->remoteIp.ip, 64, &(c->remoteIp.port))))
     {
         cout << "Accept error" << endl;
         return;
     }
     cout << c << endl;
-    NetworkHelper::setNoblock(c, true);
-    Clients->at(c) = make_shared<Client>(c);//may be renew 
-    kernel->createEvent(c, R_READABLE, bind(&Client::onMessage, Clients->at(c), placeholders::_1));
+    NetworkHelper::setNoblock(*c, true);
+    Clients->at(*c) = c; //may be renew
+    kernel->createEvent(*c, R_READABLE, bind(&Client::onMessage, Clients->at(*c), placeholders::_1));
 }

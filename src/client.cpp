@@ -40,4 +40,18 @@ void Client::cclose()
 {
     cout << "Client" << *this << "Closed" << endl;
     close(this->_fd);
+    this->~Client();
+}
+
+void MClient::onMessage(int fd)
+{
+    // this->delEvent(R_READABLE);
+    char buf[20];
+    int n = NetworkHelper::anetRead(fd, buf, 20);
+    if (!n && ((errno & EAGAIN) || !errno))
+    {
+        delEvent(R_READABLE);
+        cclose();
+    }
+    // cclose();
 }

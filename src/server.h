@@ -17,7 +17,7 @@ public:
     void Accept(int mask);
     void FirstRead(int mask);
     bool Start();
-    Client &findClient(int fd);
+    shared_ptr<Client> findClient(int fd);
     void Stop();
     
     const int mfd() const { return fd; };
