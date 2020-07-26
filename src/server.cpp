@@ -6,8 +6,9 @@
 #include "client.h"
 #include "networking.h"
 #include <regex>
-ServerHandle::ServerHandle()
+ServerHandle::ServerHandle(Processer *p)
 {
+    this->process = p;
     this->Clients = make_shared<vector<shared_ptr<Client>>>(1024);
     this->kernel = make_shared<Rkernel>(1024);
     addrinfo hints, *servinfo, *p;
@@ -28,28 +29,22 @@ ServerHandle::ServerHandle()
             // throw "getaddinfo error";
             continue;
         }
-        break;
-    }
-
-    for (p = servinfo; p != NULL; p = p->ai_next)
-    {
-        if ((s = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1)
-            continue;
-
-        if (NetworkHelper::anetListen(s, p->ai_addr, p->ai_addrlen, 511) == -1)
+        for (p = servinfo; p != NULL; p = p->ai_next)
         {
-            s = -1;
-            continue;
-        }
-        fd = s;
-        break;
-    }
-    if (s == -1)
-    {
-        cout << "Build socket failed." << endl;
-        throw;
-    }
+            if ((s = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1)
+                continue;
 
+            if (NetworkHelper::anetListen(s, p->ai_addr, p->ai_addrlen, 511) == -1)
+            {
+                s = -1;
+                continue;
+            }
+            fd = s;
+            cout << i << endl;
+            goto out;
+        }
+    }
+out:
     NetworkHelper::setNoblock(this->fd, true);
     freeaddrinfo(servinfo);
     this->kernel->createEvent(this->fd, R_READABLE, bind(&ServerHandle::Accept, this, placeholders::_1));
@@ -59,21 +54,23 @@ void ServerHandle::Stop()
     close(fd);
     kernel->stop();
 };
-shared_ptr<Client> ServerHandle::findClient(int fd)
+shared_ptr<Client> &ServerHandle::findClient(int fd)
 {
-    shared_ptr<Client> c = this->Clients->at(fd);
-    if (c)
+    return this->Clients->at(fd);
+}
+
+bool ServerHandle::dropClient(int fd)
+{
+    shared_ptr<Client> pc;
+    if (nullptr != (pc = Clients->at(fd)))
     {
-        return c;
+        (*Clients)[fd] = nullptr;
+        return true;
     }
-    else
-    {
-        return nullptr;
-    }
+    return false;
 }
 bool ServerHandle::Start()
 {
-
     if (this->kernel != nullptr)
         this->kernel->mainLoop();
     return false;
@@ -82,13 +79,13 @@ bool ServerHandle::Start()
 void ServerHandle::Accept(int fd)
 {
 
-    auto c=make_shared<MClient>(kernel);
+    auto c = make_shared<ChatClient>(kernel);
     if (-1 == (*c = NetworkHelper::anetTcpAccept(fd, (char *)c->remoteIp.ip, 64, &(c->remoteIp.port))))
     {
         cout << "Accept error" << endl;
         return;
     }
-    cout << c << endl;
+    cout << *c << endl;
     NetworkHelper::setNoblock(*c, true);
     Clients->at(*c) = c; //may be renew
     kernel->createEvent(*c, R_READABLE, bind(&Client::onMessage, Clients->at(*c), placeholders::_1));

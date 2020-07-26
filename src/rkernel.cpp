@@ -60,10 +60,10 @@ int Rkernel::processEvents()
         {
             FiredEvent fe = (*fevents)[i];
             FileEvent *e = &(events->at(fe.fd));
-            if (fe.mask & R_READABLE)
+            if (fe.mask & R_READABLE & e->mask)
                 e->rfileProc(fe.fd);
             // bind(e->rfileProc,e->data,placeholders::_1)(R_READABLE);
-            if (fe.mask & R_WRITABLE)
+            if (fe.mask & R_WRITABLE & e->mask)
                 e->wfileProc(fe.fd);
         }
     }

@@ -62,7 +62,7 @@ int Epoll::select(int maxfd, FiredEvent *fired, struct timeval *tv)
             if (e.events & EPOLLHUP)
                 mask |= R_READABLE | R_WRITABLE;
             fired[j].fd = e.data.fd;
-            fired[j].mask = e.events;
+            fired[j].mask = mask;
         }
     }
     return ret;

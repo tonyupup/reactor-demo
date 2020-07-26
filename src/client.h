@@ -5,12 +5,15 @@
 #include <memory>
 #include <exception>
 #include <cstring>
-
 using namespace std;
 
-class Rkernel;
+#include "rkernel.h"
+//class Rkernel;
+class Chat;
 class Client
 {
+    friend Chat;
+
 public:
     struct RemoteIP
     {
@@ -25,10 +28,24 @@ public:
         return *this;
     };
     virtual ~Client() = default;
-    bool addEvent(void (Client::*p)(int), int mask);
+
+    template <typename _T>
+    bool addEvent(void (_T::*func)(int), int mask)
+    {
+        if (shared_ptr<Rkernel> p = kptr.lock())
+        {
+            return p->createEvent(_fd, mask,
+                                  bind(func, dynamic_cast<typename remove_reference<_T>::type *>(this), placeholders::_1));
+        }
+        return false;
+    }
     bool delEvent(int mask);
     void cclose();
     virtual void onMessage(int fd);
+    virtual void onWriteable(int fd)
+    {
+        return;
+    };
     operator int() const;
     friend ostream &operator<<(ostream &cout, const Client &c)
     {
@@ -43,50 +60,115 @@ public:
 
 private:
     int _fd;
+    bool authed = false;
     weak_ptr<Rkernel> kptr;
 };
 
-class MClient : public Client
+class ChatClient : public Client
 {
+    friend Chat;
+
 public:
     using Client::operator=;
 
-    explicit MClient(shared_ptr<Rkernel> &pk) : Client(pk) //默认构造
+    explicit ChatClient(shared_ptr<Rkernel> &pk) : Client(pk), rbufsize(1024), wbufsize(1024) //默认构造
     {
-        if (nullptr == (buf = new uint8_t[1024]))
+        if (nullptr == (rbuf = new uint8_t[rbufsize]))
+        {
+            throw bad_alloc();
+        }
+        if (nullptr == (wbuf = new uint8_t[wbufsize]))
         {
             throw bad_alloc();
         }
     };
 
-    MClient(const MClient &c) : Client(c), buf(new uint8_t[1024]) //复制构造函数
-    {
-        memcpy(buf, c.buf, 1024);
-    }
-    MClient &operator=(const MClient &c) = delete; //赋值运算符
+    ChatClient(const ChatClient &c) = delete; // : Client(c), buf(new uint8_t[1024]) //复制构造函数
+    // {
+    //     memcpy(buf, c.buf, 1024);
+    // }
+    ChatClient &operator=(const ChatClient &c) = delete; //赋值运算符
 
-    MClient(MClient &&c) : Client(move(c)), buf(c.buf) //移动构造函数
+    ChatClient(ChatClient &&c) : Client(move(c)) //移动构造函数
     {
-        c.buf = nullptr;
+        wbufsize = c.wbufsize;
+        rbufsize = c.rbufsize;
+        windex = c.windex;
+        rindex = c.rindex;
+
+        if (rbuf != nullptr)
+        {
+            delete[] rbuf;
+        }
+        if (wbuf != nullptr)
+        {
+            delete[] wbuf;
+        }
+
+        rbuf = c.rbuf;
+        wbuf = c.wbuf;
+
+        c.rbuf = nullptr;
+        c.wbuf = nullptr;
     }
-    MClient &operator=(MClient &&c) //移动复制运算符
+    ChatClient &operator=(ChatClient &&c) //移动复制运算符
     {
         Client(move(c));
-        buf = c.buf;
-        c.buf = nullptr;
+        if (rbuf != nullptr)
+        {
+            delete[] rbuf;
+        }
+        if (wbuf != nullptr)
+        {
+            delete[] wbuf;
+        }
+        rbuf = c.rbuf;
+        wbuf = c.wbuf;
+
+        c.wbuf = nullptr;
+        c.rbuf = nullptr;
+
+        wbufsize = c.wbufsize;
+        rbufsize = c.rbufsize;
+
+        windex = c.windex;
+        rindex = c.rindex;
+
         return *this;
     }
     virtual void onMessage(int fd) override;
-    virtual ~MClient() override
+    virtual void onWriteable(int fd) override;
+
+    void Writeable(int fd) noexcept
     {
-        if (buf != nullptr)
+        return;
+    }
+    bool adata2wbuf(const uint8_t *, ssize_t n);
+    bool adata2rbuf(const uint8_t *, ssize_t n);
+    inline void clearwbuf() noexcept
+    {
+        this->windex = 0;
+    }
+    inline void clearrbuf() noexcept
+    {
+        this->rindex = 0;
+    }
+    virtual ~ChatClient() override
+    {
+        if (rbuf != nullptr)
         {
-            delete[] buf;
+            delete[] rbuf;
         }
+        if (wbuf != nullptr)
+            delete[] wbuf;
     }
     bool auth(int fd);
 
 private:
-    uint8_t *buf;
+    uint8_t *rbuf, *wbuf;
+    ssize_t wbufsize, rbufsize;
+    ssize_t rindex, windex;
+    uint32_t currOp;
+    char account[20];
 };
 #endif

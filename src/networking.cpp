@@ -10,6 +10,10 @@
 #include <arpa/inet.h>
 #include <vector>
 #include <memory>
+#include <linux/tcp.h>
+#include <linux/types.h>
+#include <asm/byteorder.h>
+#include <linux/ip.h>
 
 bool NetworkHelper::setNoblock(int fd, bool non_block)
 {
@@ -102,7 +106,14 @@ int NetworkHelper::anetTcpAccept(int s, char *ip, size_t ip_len, int *port)
     }
     return fd;
 }
+/*
+    Read count bytes to buffer.
+    Return:
+        >0 normaly,recv count;
+        -1 errno happend ,no data recv
+        -2 err happend with data recv
 
+*/
 int NetworkHelper::anetRead(int fd, char *buf, int count)
 {
     ssize_t nread, totlen = 0;
@@ -112,9 +123,34 @@ int NetworkHelper::anetRead(int fd, char *buf, int count)
         if (nread == 0)
             return totlen;
         if (nread == -1)
-            return -1;
+        {
+            if (errno & EAGAIN)
+                break;
+            if (totlen > 0)
+                return totlen;
+            else
+                return -1;
+        }
         totlen += nread;
         buf += nread;
     }
     return totlen;
 }
+// int NetworkHelper::SocketConnected(int sock)
+// {
+//     if (sock <= 0)
+//         return 0;
+//     struct tcp_info info;
+//     int len = sizeof(info);
+//     getsockopt(sock, IPPROTO_TCP, TCP_INFO, &info, (socklen_t *)&len);
+//     if ((info.tcpi_state == TCP_ESTABLISHED))
+//     {
+//         //myprintf("socket connected\n");
+//         return 1;
+//     }
+//     else
+//     {
+//         //myprintf("socket disconnected\n");
+//         return 0;
+//     }
+// }

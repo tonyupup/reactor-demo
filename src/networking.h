@@ -11,7 +11,7 @@ public:
     static int anetListen(int s, struct sockaddr *sa, socklen_t len, int backlog);
     static int anetGenericAccept(int s, struct sockaddr *sa, socklen_t *len);
     static int anetTcpAccept(int s, char *ip, size_t ip_len, int *port);
-    static int  anetRead(int fd, char *buf, int count);
+    static int anetRead(int fd, char *buf, int count);
 };
 
 #endif

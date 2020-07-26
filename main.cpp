@@ -6,13 +6,14 @@
 #include <vector>
 #include "src/server.h"
 #include <initializer_list>
+#include "src/chatRoom.h"
 
-// #include "src/server.h"
+// Processer *process = nullptr;
 using namespace std;
 int main()
 {
-
     auto pserver = make_shared<ServerHandle>();
+    Processer *process = new Chat(pserver);
     pserver->Start();
     return 0;
 }
