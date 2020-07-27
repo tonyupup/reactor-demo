@@ -63,9 +63,8 @@ public:
     }
     void Start()
     {
-
-        kernelApi->createEvent(_fd, R_READABLE, bind(&MClient::Parse, this, placeholders::_1));
-        kernelApi->createEvent(STDIN_FILENO, R_WRITABLE, bind(&MClient::InputParse, this, placeholders::_1));
+        addEvent(&MClient::Parse, R_READABLE);
+        addEvent(&MClient::InputParse, R_READABLE, STDIN_FILENO);
 
         kernelApi->mainLoop();
     }
@@ -74,22 +73,23 @@ public:
         int i = 0;
         i = NetworkHelper::anetRead(fd, (char *)rbuf, BUF_SIZE);
         cout << rbuf << endl;
+        cout << "\n>>> " << flush;
     }
     void InputParse(int fd)
     {
-        int inputindex = 0;
+        int inputLength = 0;
         int i = 0;
         do
         {
             i = NetworkHelper::anetRead(fd, (char *)inputBuf, BUF_SIZE);
-            inputindex += i;
+            inputLength += i;
         } while (i != 0);
-        if (!inputindex)
+        if (!inputLength)
             return;
         int spaceindex = 0;
-        while (spaceindex < inputindex && inputBuf[spaceindex++] != ' ')
+        while (spaceindex < inputLength && inputBuf[spaceindex++] != ' ')
             ;
-        inputBuf[spaceindex - 1] = '\0';
+        // inputBuf[spaceindex] = '\0';
 
         ChatOperator op;
         if (!strncmp((const char *)inputBuf, "SENDTO", 6))
@@ -110,8 +110,8 @@ public:
         }
         else
         {
-            cout << "Bad Commend" << endl;
-            inputindex = 0;
+            cout << "Bad Command" << endl;
+            inputLength = 0;
             return;
         }
 
@@ -127,32 +127,72 @@ public:
         {
         case ChatOperator::LOGIN:
         {
-            while (inputBuf[++spaceindex] != ' ')
+            while (spaceindex < inputLength && inputBuf[spaceindex++] == ' ')
                 ;
-            int i = spaceindex;
-            while (spaceindex < inputindex && inputBuf[spaceindex++] == ' ')
+            int i = spaceindex - 1;
+            while (spaceindex < inputLength && inputBuf[spaceindex++] != ' ')
                 ;
-            inputBuf[spaceindex - 1] = '\0';
+            // inputBuf[spaceindex - 1] = '\0';
+            if (i == spaceindex || i + 1 == spaceindex)
+                goto error;
             adata2wbuf((const uint8_t *)inputBuf + i, spaceindex - i - 1);
             adata2wbuf((const uint8_t *)"$", 1);
 
-            while (inputBuf[++spaceindex] != ' ')
+            while (spaceindex < inputLength && inputBuf[spaceindex++] == ' ')
                 ;
-            i = spaceindex;
-            while (spaceindex < inputindex && inputBuf[spaceindex++] != ' ')
+            i = spaceindex - 1;
+            while (spaceindex < inputLength && inputBuf[spaceindex++] != ' ')
                 ;
-            inputBuf[spaceindex - 1] = '\0';
-
+            // inputBuf[spaceindex - 1] = '\0';
+            if (i == spaceindex)
+                goto error;
             adata2wbuf((const uint8_t *)inputBuf + i, spaceindex - i - 1);
             adata2wbuf((const uint8_t *)"$", 1);
             adata2wbuf((const uint8_t *)"\r\n", 2);
 
-            send(_fd, wbuf, windex, 0);
+            addEvent(&MClient::OnWrite, R_WRITABLE);
             break;
         }
-
-        default:
+        case ChatOperator::LISTALL:
+        {
+            adata2wbuf((const uint8_t *)"\r\n", 2);
+            addEvent(&MClient::OnWrite, R_WRITABLE);
             break;
+        }
+        case ChatOperator::SENDMSG:
+        {
+            while (spaceindex < inputLength && inputBuf[spaceindex++] == ' ') //跳过空格
+                ;
+            int chStart = spaceindex - 1; //记录字符开始位置
+            while (spaceindex < inputLength && inputBuf[spaceindex++] != ' ')
+                ;                            //指向非空格下一个位置
+            inputBuf[spaceindex - 1] = '\0'; //空格替换为'\0'
+            if (chStart == spaceindex || chStart + 1 == spaceindex)
+                goto error;
+            int num = atoi((const char *)inputBuf + chStart);
+            ubuf.chi = htonl(num);
+            adata2wbuf((const uint8_t *)ubuf.chs, 4);
+            adata2wbuf((const uint8_t *)"$", 1);
+            spaceindex--;
+            while (spaceindex < inputLength && inputBuf[spaceindex++] == ' ')
+                ; //跳过空格
+            chStart = spaceindex;
+            char endpoint = inputBuf[spaceindex - 1] == '"' ? '"' : ' ';
+
+            while (spaceindex < inputLength && inputBuf[spaceindex++] != endpoint)
+                ;
+            adata2wbuf(inputBuf + chStart, spaceindex - chStart);
+            adata2wbuf((const uint8_t *)"$\r\n", 3);
+
+            addEvent(&MClient::OnWrite, R_WRITABLE);
+            break;
+        }
+        default:
+        {
+        error:
+            cout << "bad command" << endl;
+            break;
+        }
         }
     }
     bool adata2wbuf(const uint8_t *data, ssize_t n)
@@ -193,6 +233,26 @@ public:
     }
 
 private:
+    bool addEvent(void (MClient::*p)(int), int mask, int fd = -1)
+    {
+        return this->kernelApi->createEvent(fd >= 0 ? fd : _fd, mask, bind(p, this, placeholders::_1));
+    };
+    void delEvent(int mask, int fd = -1)
+    {
+        return this->kernelApi->deleteEvent(fd >= 0 ? fd : _fd, mask);
+    }
+    void OnWrite(int)
+    {
+        int i = 0;
+        do
+        {
+            i = send(_fd, wbuf, windex - i, 0);
+        } while (i < windex && i != -1);
+        if (i < 0)
+            throw exception();
+        windex = 0;
+        delEvent(R_WRITABLE);
+    }
     shared_ptr<Rkernel> kernelApi;
     uint8_t *wbuf, *rbuf, *inputBuf;
     int windex = 0, wbufsize = BUF_SIZE;
