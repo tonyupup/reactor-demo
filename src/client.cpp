@@ -4,7 +4,8 @@
 #include "networking.h"
 #include "rkernel.h"
 #include "memory"
-extern Processer *process;
+
+
 Client::operator int() const
 {
     return this->_fd;
@@ -45,25 +46,7 @@ void Client::cclose()
 
 void ChatClient::onMessage(int fd)
 {
-    int n = NetworkHelper::anetRead(fd, (char *)(this->rbuf + this->rindex), 1024 - this->rindex);
-
-    if (!n || !(errno & EINTR || errno & EWOULDBLOCK))
-    {
-        delEvent(R_READABLE);
-        cclose();
-        this->~ChatClient();
-        return;
-    }
-    rindex += n;
-    try
-    {
-        process->Parse(*this);
-    }
-    catch (exception &e)
-    {
-        fprintf(stderr, "Process Clients %d error %s", (int)*this, e.what());
-        cclose();
-    }
+    
     // cclose();
 }
 

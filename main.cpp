@@ -13,7 +13,7 @@ using namespace std;
 int main()
 {
     auto pserver = make_shared<ServerHandle>();
-    Processer *process = new Chat(pserver);
-    pserver->Start();
+    Chat *process = new Chat(pserver);
+    process->Start();
     return 0;
 }
