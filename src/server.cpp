@@ -8,8 +8,6 @@
 #include <regex>
 ServerHandle::ServerHandle()
 {
-
-    this->Clients = make_shared<vector<shared_ptr<Client>>>(1024);
     this->kernel = make_shared<Rkernel>(1024);
     addrinfo hints, *servinfo, *p;
     char _port[6];
@@ -47,28 +45,13 @@ ServerHandle::ServerHandle()
 out:
     NetworkHelper::setNoblock(this->fd, true);
     freeaddrinfo(servinfo);
-    
 }
 void ServerHandle::Stop()
 {
     close(fd);
     kernel->stop();
 };
-shared_ptr<Client> &ServerHandle::findClient(int fd)
-{
-    return this->Clients->at(fd);
-}
 
-bool ServerHandle::dropClient(int fd)
-{
-    shared_ptr<Client> pc;
-    if (nullptr != (pc = Clients->at(fd)))
-    {
-        (*Clients)[fd] = nullptr;
-        return true;
-    }
-    return false;
-}
 bool ServerHandle::Start(Processer *process)
 {
     this->kernel->createEvent(this->fd, R_READABLE, bind(&Processer::ConnectHandle, process, placeholders::_1));

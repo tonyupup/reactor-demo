@@ -8,3 +8,4 @@ add_compile_options(-std=c++11)
 
 add_executable(main main.cpp ${SRC_DIR})
 add_executable(client Mclient.cpp ${SRC_DIR})
+# target_link_libraries(client pthread)

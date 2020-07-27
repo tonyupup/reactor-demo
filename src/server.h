@@ -24,16 +24,11 @@ public:
     ServerHandle();
     // void Accept(int mask);
     bool Start(Processer *);
-    shared_ptr<Client> &findClient(int fd);
     void Stop();
-    bool dropClient(int fd);
-
-    const int mfd() const { return fd; };
 
 private:
     int fd = 0;
     shared_ptr<Rkernel> kernel;
-    shared_ptr<vector<shared_ptr<Client>>> Clients;
 };
 
 #endif
