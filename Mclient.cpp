@@ -70,9 +70,86 @@ public:
     }
     void Parse(int fd)
     {
-        int i = 0;
-        i = NetworkHelper::anetRead(fd, (char *)rbuf, BUF_SIZE);
-        cout << rbuf << endl;
+        int total = 0, lindex = 0;
+        total = NetworkHelper::anetRead(fd, (char *)rbuf, BUF_SIZE);
+        if (total > 0)
+        {
+            if ('$' == rbuf[0])
+            {
+                lindex += 6;
+                if (total < 6 || rbuf[5] != '$')
+                    goto error;
+                switch (parseOp((const char *)rbuf + 1))
+                {
+                case ChatOperator::LOGIN:
+                {
+                    if (total < 8)
+                        goto error;
+                    if (strncmp((const char *)rbuf + total - 2, "\r\n", 2))
+                        goto error;
+                    rbuf[total - 2] = '\0';
+                    cout << rbuf + lindex << endl;
+                    break;
+                }
+                case ChatOperator::SENDMSG:
+                {
+                    int i = lindex;
+                    while (lindex < total && '$' != rbuf[lindex++])
+                        ;
+                    rbuf[lindex - 1] = '\0';
+                    cout << "From " << rbuf + i << ":" << flush;
+                    i = lindex;
+                    while (lindex < total && '$' != rbuf[lindex++])
+                        ;
+                    rbuf[lindex - 1] = '\0';
+                    cout << rbuf + i << endl;
+                    if (strncmp((char *)(rbuf + lindex), "\r\n", 2))
+                        goto error;
+                    break;
+                }
+                case ChatOperator::LISTALL:
+                {
+                    if (total == 8)
+                    {
+                        cout << "No Users." << endl;
+                        return;
+                    }
+                    do
+                    {
+                        if (rbuf[lindex + 4] != '$')
+                            goto error;
+                        union uic {
+                            int chi;
+                            char chs[4];
+                        } * ubuf;
+                        ubuf = static_cast<uic *>((void *)(rbuf + lindex));
+                        int rid = ntohl(ubuf->chi);
+                        lindex += 5;
+                        int i = lindex;
+
+                        while (lindex < total && '$' != rbuf[lindex++])
+                            ;
+                        rbuf[lindex - 1] = '\0';
+                        cout << "ID" << rid << ", Name: " << rbuf + i << endl;
+                    } while (lindex < total && 0 != strncmp((const char *)rbuf + lindex, "\r\n", 2));
+                    break;
+                }
+                default:
+                {
+                error:
+                    cout << "Parse Error" << endl;
+                    return;
+                }
+                }
+            }
+            else
+            {
+                for (int j = 0; j < total; j++)
+                    cout << rbuf[j];
+                cout << endl;
+            }
+        }
+        rindex = 0;
         cout << "\n>>> " << flush;
     }
     void InputParse(int fd)
@@ -86,8 +163,8 @@ public:
         } while (i != 0);
         if (!inputLength)
             return;
-        int spaceindex = 0;
-        while (spaceindex < inputLength && inputBuf[spaceindex++] != ' ')
+        int spaceIndex = 0;
+        while (spaceIndex < inputLength && inputBuf[spaceIndex++] != ' ')
             ;
         // inputBuf[spaceindex] = '\0';
 
@@ -127,26 +204,26 @@ public:
         {
         case ChatOperator::LOGIN:
         {
-            while (spaceindex < inputLength && inputBuf[spaceindex++] == ' ')
+            while (spaceIndex < inputLength && inputBuf[spaceIndex++] == ' ')
                 ;
-            int i = spaceindex - 1;
-            while (spaceindex < inputLength && inputBuf[spaceindex++] != ' ')
+            int i = spaceIndex - 1;
+            while (spaceIndex < inputLength && inputBuf[spaceIndex++] != ' ')
                 ;
             // inputBuf[spaceindex - 1] = '\0';
-            if (i == spaceindex || i + 1 == spaceindex)
+            if (i == spaceIndex || i + 1 == spaceIndex)
                 goto error;
-            adata2wbuf((const uint8_t *)inputBuf + i, spaceindex - i - 1);
+            adata2wbuf((const uint8_t *)inputBuf + i, spaceIndex - i - 1);
             adata2wbuf((const uint8_t *)"$", 1);
 
-            while (spaceindex < inputLength && inputBuf[spaceindex++] == ' ')
+            while (spaceIndex < inputLength && inputBuf[spaceIndex++] == ' ')
                 ;
-            i = spaceindex - 1;
-            while (spaceindex < inputLength && inputBuf[spaceindex++] != ' ')
+            i = spaceIndex - 1;
+            while (spaceIndex < inputLength && inputBuf[spaceIndex++] != ' ')
                 ;
             // inputBuf[spaceindex - 1] = '\0';
-            if (i == spaceindex)
+            if (i == spaceIndex)
                 goto error;
-            adata2wbuf((const uint8_t *)inputBuf + i, spaceindex - i - 1);
+            adata2wbuf((const uint8_t *)inputBuf + i, spaceIndex - i - 1);
             adata2wbuf((const uint8_t *)"$", 1);
             adata2wbuf((const uint8_t *)"\r\n", 2);
 
@@ -161,27 +238,26 @@ public:
         }
         case ChatOperator::SENDMSG:
         {
-            while (spaceindex < inputLength && inputBuf[spaceindex++] == ' ') //跳过空格
+            while (spaceIndex < inputLength && inputBuf[spaceIndex++] == ' ') //跳过空格
                 ;
-            int chStart = spaceindex - 1; //记录字符开始位置
-            while (spaceindex < inputLength && inputBuf[spaceindex++] != ' ')
+            int chStart = spaceIndex - 1; //记录字符开始位置
+            while (spaceIndex < inputLength && inputBuf[spaceIndex++] != ' ')
                 ;                            //指向非空格下一个位置
-            inputBuf[spaceindex - 1] = '\0'; //空格替换为'\0'
-            if (chStart == spaceindex || chStart + 1 == spaceindex)
+            inputBuf[spaceIndex - 1] = '\0'; //空格替换为'\0'
+            if (chStart == spaceIndex || chStart + 1 == spaceIndex)
                 goto error;
             int num = atoi((const char *)inputBuf + chStart);
             ubuf.chi = htonl(num);
             adata2wbuf((const uint8_t *)ubuf.chs, 4);
             adata2wbuf((const uint8_t *)"$", 1);
-            spaceindex--;
-            while (spaceindex < inputLength && inputBuf[spaceindex++] == ' ')
+            spaceIndex--;
+            while (spaceIndex < inputLength && inputBuf[spaceIndex++] == ' ')
                 ; //跳过空格
-            chStart = spaceindex;
-            char endpoint = inputBuf[spaceindex - 1] == '"' ? '"' : ' ';
-
-            while (spaceindex < inputLength && inputBuf[spaceindex++] != endpoint)
+            char endpoint = inputBuf[spaceIndex] == '"' && spaceIndex++ ? '"' : ' ';
+            chStart = spaceIndex;
+            while (spaceIndex < inputLength && inputBuf[spaceIndex++] != endpoint)
                 ;
-            adata2wbuf(inputBuf + chStart, spaceindex - chStart);
+            adata2wbuf(inputBuf + chStart, spaceIndex - 1 - chStart);
             adata2wbuf((const uint8_t *)"$\r\n", 3);
 
             addEvent(&MClient::OnWrite, R_WRITABLE);
@@ -252,6 +328,17 @@ private:
             throw exception();
         windex = 0;
         delEvent(R_WRITABLE);
+    }
+
+    int parseOp(const char *p)
+    {
+        union uic {
+            int chi;
+            char chs[4];
+        } * ubuf;
+        ubuf = static_cast<uic *>((void *)p);
+        return ntohl(ubuf->chi);
+        // adata2wbuf((const uint8_t *)ubuf.chs, 4);
     }
     shared_ptr<Rkernel> kernelApi;
     uint8_t *wbuf, *rbuf, *inputBuf;
