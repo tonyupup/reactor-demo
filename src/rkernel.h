@@ -37,13 +37,14 @@ public:
     explicit Rkernel(int maxSize = MaxEventSize);
     bool createEvent(int fd, int mask, function<void(int)>);
     void deleteEvent(int fd, int delmask);
-    void stop(){};
+    void stop(){run=false;};
     int processEvents();
     int mainLoop();
 
 private:
     int setsize;
     int maxfd;
+    bool run;
     shared_ptr<Epoll> eventapi;
     shared_ptr<vector<FileEvent>> events;
     shared_ptr<vector<FiredEvent>> fevents;

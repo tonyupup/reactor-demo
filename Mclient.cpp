@@ -97,7 +97,7 @@ public:
                     while (lindex < total && '$' != rbuf[lindex++])
                         ;
                     rbuf[lindex - 1] = '\0';
-                    cout << "From " << rbuf + i << ":" << flush;
+                    cout << "From " << rbuf + i << ":" << endl;
                     i = lindex;
                     while (lindex < total && '$' != rbuf[lindex++])
                         ;
@@ -130,7 +130,7 @@ public:
                         while (lindex < total && '$' != rbuf[lindex++])
                             ;
                         rbuf[lindex - 1] = '\0';
-                        cout << "ID" << rid << ", Name: " << rbuf + i << endl;
+                        cout << "ID: " << rid << ", Name: " << rbuf + i << endl;
                     } while (lindex < total && 0 != strncmp((const char *)rbuf + lindex, "\r\n", 2));
                     break;
                 }
@@ -192,13 +192,8 @@ public:
             return;
         }
 
-        union {
-            int chi;
-            char chs[4];
-        } ubuf;
-
-        ubuf.chi = htonl(op);
-        adata2wbuf((const uint8_t *)ubuf.chs, 4);
+        uint32_t nop = htonl(op);
+        adata2wbuf((const uint8_t *)&nop, 4);
 
         switch (op)
         {
@@ -247,8 +242,8 @@ public:
             if (chStart == spaceIndex || chStart + 1 == spaceIndex)
                 goto error;
             int num = atoi((const char *)inputBuf + chStart);
-            ubuf.chi = htonl(num);
-            adata2wbuf((const uint8_t *)ubuf.chs, 4);
+            uint32_t nnum = htonl(num);
+            adata2wbuf((const uint8_t *)&nnum, 4);
             adata2wbuf((const uint8_t *)"$", 1);
             spaceIndex--;
             while (spaceIndex < inputLength && inputBuf[spaceIndex++] == ' ')

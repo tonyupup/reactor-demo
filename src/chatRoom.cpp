@@ -21,6 +21,12 @@ const ssize_t CommandSplit_SIZE = 1;
 
 const uint8_t *CommandStop = (const uint8_t *)"\r\n";
 const ssize_t CommandStop_SIZE = 2;
+
+union opCast {
+    uint32_t op;
+    char ch[4];
+};
+
 void Chat::Start() noexcept
 {
     this->server->Start(this);
@@ -89,13 +95,8 @@ void Chat::Parse(shared_ptr<Client> c)
     do
     {
         uint32_t op;
-        union {
-            uint32_t op;
-            char ch[4];
-        } opv;
-
-        memcpy(opv.ch, pm->rbuf + lindex, 4);
-        op = ntohl(opv.op);
+        op = ntohl(*static_cast<uint32_t *>((void *)(pm->rbuf + lindex)));
+        opCast *opv = (static_cast<opCast *>((void *)(pm->rbuf + lindex)));
         lindex += 4;
 
         //auth check
@@ -141,7 +142,7 @@ void Chat::Parse(shared_ptr<Client> c)
                 if (lindex >= pm->rindex)
                     pm->rindex = 0;
                 pm->adata2wbuf(ReplyCommand, 1);
-                pm->adata2wbuf((const uint8_t *)opv.ch, 4);
+                pm->adata2wbuf((const uint8_t *)opv->ch, 4);
                 pm->adata2wbuf(CommandSplit, CommandSplit_SIZE);
                 pm->adata2wbuf((const uint8_t *)"Login Ok\r\n", 10); //, lindex);
                 pm->authed = true;
@@ -184,27 +185,22 @@ void Chat::Parse(shared_ptr<Client> c)
                 pm->rindex = 0;
                 return;
             }
-            int fd = 0;
             online.remove_if([](weak_ptr<Client> &p) -> bool { return p.expired(); });
             pm->adata2wbuf(ReplyCommand, CommandSplit_SIZE); //$
-            pm->adata2wbuf((const uint8_t *)opv.ch, 4);      //add operator  //LISTALL
+            pm->adata2wbuf((const uint8_t *)opv->ch, 4);     //add operator  //LISTALL
             pm->adata2wbuf(CommandSplit, CommandSplit_SIZE);
-            for (auto cpair = online.begin(); cpair != online.end(); ++cpair, fd++)
+            for (auto cpair = online.begin(); cpair != online.end(); ++cpair)
             {
                 if (shared_ptr<Client> pcs = cpair->lock())
                 {
                     if (nullptr == pcs.get() || pm == pcs.get())
                         continue;
-                    union {
-                        int chi;
-                        char chs[4];
-                    } ubuf = {0};
 
                     auto *p = dynamic_cast<ChatClient *>(pcs.get());
                     if (p != nullptr)
                     {
-                        ubuf.chi = htonl(fd);
-                        pm->adata2wbuf((uint8_t *)ubuf.chs, 4);
+                        int cfd = htonl(p->_fd);
+                        pm->adata2wbuf(static_cast<uint8_t *>((void *)&cfd), 4);
                         pm->adata2wbuf((const uint8_t *)"$", 1);
                         pm->adata2wbuf((const uint8_t *)p->account, strlen(p->account));
                         pm->adata2wbuf((const uint8_t *)"$", 1);
@@ -228,14 +224,10 @@ void Chat::Parse(shared_ptr<Client> c)
                 return;
             }
 
-            union {
-                uint32_t chi;
-                char chs[4];
-            } ubuf;
-            memcpy(ubuf.chs, pm->rbuf + lindex, 4);
+            opCast *ubuf = static_cast<opCast *>((void *)(pm->rbuf + lindex));
             lindex += 5;
 
-            int i = ntohl(ubuf.chi);
+            int i = ntohl(ubuf->op);
             auto p = clients.at(i);
 
             if (p != nullptr)
@@ -244,8 +236,8 @@ void Chat::Parse(shared_ptr<Client> c)
                 // shared_ptr<ChatClient> pcc;
                 auto &pcc = dynamic_cast<ChatClient &>(*p);
                 pcc.adata2wbuf(ReplyCommand, 1);
-                pcc.adata2wbuf((const uint8_t *)opv.ch, 4);
-                pm->adata2wbuf(CommandSplit,CommandSplit_SIZE);
+                pcc.adata2wbuf((const uint8_t *)opv->ch, 4);
+                pcc.adata2wbuf(CommandSplit, CommandSplit_SIZE);
                 i = 0;
                 while (++i && lindex < pm->rindex && '$' != (pm->rbuf)[++lindex])
                     ;

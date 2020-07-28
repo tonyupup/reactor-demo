@@ -7,12 +7,20 @@
 #include "src/server.h"
 #include <initializer_list>
 #include "src/chatRoom.h"
+#include <sys/signal.h>
 
 // Processer *process = nullptr;
 using namespace std;
+static shared_ptr<ServerHandle> pserver;
+void ps(int)
+{
+    pserver->Stop();
+};
 int main()
 {
-    auto pserver = make_shared<ServerHandle>();
+
+    pserver = make_shared<ServerHandle>();
+    signal(SIGINT, ps);
     Chat *process = new Chat(pserver);
     process->Start();
     return 0;

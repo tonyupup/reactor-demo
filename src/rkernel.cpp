@@ -7,6 +7,7 @@ Rkernel::Rkernel(int maxSize)
     this->events = make_shared<vector<FileEvent>>(maxSize);
     this->fevents = make_shared<vector<FiredEvent>>(maxSize);
     this->setsize = maxSize;
+    run=true;
 }
 bool Rkernel::createEvent(int fd, int mask, function<void(int)> proc)
 {
@@ -71,6 +72,6 @@ int Rkernel::processEvents()
 }
 int Rkernel::mainLoop()
 {
-    while (1)
+    while (run)
         processEvents();
 }
