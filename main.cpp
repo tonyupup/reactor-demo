@@ -1,7 +1,7 @@
 #include <iostream>
 #include <memory>
 #include <functional>
-
+#include <type_traits>
 #include "src/server.h"
 using namespace std;
 
@@ -24,12 +24,13 @@ private:
 };
 using Func = void(int);
 
-void callback(function<void(int)> f)
+void callback(function<Func> f)
 {
     f(2);
 }
 int main()
 {
+
     auto pserver = make_shared<ServerHandle>();
 
     pserver->Start();

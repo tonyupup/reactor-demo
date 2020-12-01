@@ -4,4 +4,4 @@ build/
 *.out
 CMakeCache.txt
 Makefile
-./CMakeFiles/
+CMakeFiles/

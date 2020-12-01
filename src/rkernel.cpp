@@ -1,5 +1,9 @@
 #include "rkernel.h"
-#include "epollApi.h"
+#ifdef __APPLE__
+    #include "kepollApi.h"
+#else
+    #include "epollApi.h"
+#endif
 #include "networking.h"
 Rkernel::Rkernel(int maxSize)
 {

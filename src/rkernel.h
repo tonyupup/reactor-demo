@@ -1,7 +1,6 @@
 #ifndef __RKERNEL_H
 #define __RKERNEL_H
 
-#include <sys/epoll.h>
 #include <memory>
 #include <vector>
 #include <functional>
