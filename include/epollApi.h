@@ -26,15 +26,18 @@ public:
     {
 #ifdef __APPLE__
         epfd = kqueue();
+        if (epfd<0){
+            throw "bad create kqueue fd";
+        }
+        events = make_shared<vector<struct kevent>>(maxSize);
 #else
         epfd = epoll_create(maxSize);
+        if (epfd<0){
+            throw "bad create kqueue fd";
+        }
+        events = make_shared<vector<struct kevent>>(maxSize);
 #endif
 
-#ifdef __APPLE__
-        events = make_shared<vector<struct kevent>>(maxSize);
-#else
-        events = make_shared<vector<struct kevent>>(maxSize);
-#endif
     }
     bool addEvent(int fd, FileEvent *, int mask);
     void delEvent(int fd, FileEvent *, int delmask);
@@ -45,7 +48,7 @@ private:
     int epfd;
     // unique_ptr<int> epfd;
 #ifdef __APPLE__
-    shared_ptr<vector<struct kevent>> events;
+    shared_ptr<vector<struct kevent> > events;
 #else
     shared_ptr<vector<struct epoll_event>> events;
 #endif
