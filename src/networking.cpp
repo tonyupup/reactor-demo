@@ -40,7 +40,7 @@ bool NetworkHelper::setNoblock(int fd, bool non_block)
 }
 int NetworkHelper::anetListen(int s, struct sockaddr *sa, socklen_t len, int backlog)
 {
-    if (bind(s, sa, len) == -1)
+    if (::bind(s, sa, len) == -1)
     {
         // anetSetError(err, "bind: %s", strerror(errno));
         close(s);

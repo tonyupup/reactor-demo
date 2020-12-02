@@ -2,7 +2,7 @@
 #include <memory>
 #include <functional>
 #include <type_traits>
-#include "src/server.h"
+#include "server.h"
 using namespace std;
 
 class S

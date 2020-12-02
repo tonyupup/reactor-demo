@@ -1,13 +1,17 @@
-#ifndef __KEPOLLAPI_H
-#define __KEPOLLAPI_H
+#ifndef __EPOLLAPI_H
+#define __EPOLLAPI_H
 
-#include <sys/event.h>
-#include <sys/types.h>
 #include <time.h>
-#include <stdlib.h>
 #include <sys/unistd.h>
+#include <sys/types.h>
 #include <memory>
 #include <vector>
+
+#ifdef __APPLE__
+#include <sys/event.h>
+#else
+#include <sys/epoll.h>
+#endif
 
 using namespace std;
 
@@ -20,8 +24,17 @@ class Epoll
 public:
     explicit Epoll(int maxSize)
     {
+#ifdef __APPLE__
         epfd = kqueue();
+#else
+        epfd = epoll_create(maxSize);
+#endif
+
+#ifdef __APPLE__
         events = make_shared<vector<struct kevent>>(maxSize);
+#else
+        events = make_shared<vector<struct kevent>>(maxSize);
+#endif
     }
     bool addEvent(int fd, FileEvent *, int mask);
     void delEvent(int fd, FileEvent *, int delmask);
@@ -31,8 +44,11 @@ public:
 private:
     int epfd;
     // unique_ptr<int> epfd;
+#ifdef __APPLE__
     shared_ptr<vector<struct kevent>> events;
-    // struct epoll_event *events = nullptr;
+#else
+    shared_ptr<vector<struct epoll_event>> events;
+#endif
 };
 
 #endif

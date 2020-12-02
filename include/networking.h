@@ -2,6 +2,7 @@
 #define __NETWORKING_H
 
 #include <unistd.h>
+#include <sys/socket.h>
 
 using namespace std;
 class NetworkHelper
