@@ -3,36 +3,20 @@
 #include <functional>
 #include <type_traits>
 #include "server.h"
+#include <boost/optional.hpp>
+
+
 using namespace std;
-
-class S
-{
-public:
-    S(int f) : _m(f){};
-    void f(int x)
-    {
-        _m += x;
-    }
-    friend ostream &operator<<(ostream &out, const S &s)
-    {
-        out << s._m << endl;
-        return out;
-    }
-
-private:
-    int _m;
-};
-using Func = void(int);
-
-void callback(function<Func> f)
-{
-    f(2);
-}
+#define CONCETION(x,y) x##y
+#define CONCET(x,y) CONCETION(x,y)
+#define DEFER(func) auto CONCET(_defer_,__LINE__) = std::shared_ptr<void *>(0,func)
 int main()
 {
 
-    auto pserver = make_shared<ServerHandle>();
-
+    auto pserver = new ServerHandle();
+    DEFER([&](void *){
+        delete pserver;
+    });
     pserver->Start();
     return 0;
 }
